@@ -1,0 +1,36 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{E464AB75-1960-4E9C-877F-1FF6246ACB8C}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Protegey.Sdk", "src\Protegey.Sdk\Protegey.Sdk.csproj", "{CED2814D-C663-44E3-A5C6-5C15B517A86C}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{48A4D4FE-195E-4597-9376-C77DBF2EEA05}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Protegey.Sdk.Tests", "tests\Protegey.Sdk.Tests\Protegey.Sdk.Tests.csproj", "{B5D23E17-B3FD-4868-BFA3-1421381CB914}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{CED2814D-C663-44E3-A5C6-5C15B517A86C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CED2814D-C663-44E3-A5C6-5C15B517A86C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CED2814D-C663-44E3-A5C6-5C15B517A86C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CED2814D-C663-44E3-A5C6-5C15B517A86C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B5D23E17-B3FD-4868-BFA3-1421381CB914}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B5D23E17-B3FD-4868-BFA3-1421381CB914}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B5D23E17-B3FD-4868-BFA3-1421381CB914}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B5D23E17-B3FD-4868-BFA3-1421381CB914}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{CED2814D-C663-44E3-A5C6-5C15B517A86C} = {E464AB75-1960-4E9C-877F-1FF6246ACB8C}
+		{B5D23E17-B3FD-4868-BFA3-1421381CB914} = {48A4D4FE-195E-4597-9376-C77DBF2EEA05}
+	EndGlobalSection
+EndGlobal

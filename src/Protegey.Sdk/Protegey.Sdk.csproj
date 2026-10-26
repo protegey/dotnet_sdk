@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- net8.0, not net9.0 — the current LTS, the safer default for a bank's own backend to
+         depend on (LTS releases get 3 years of support; non-LTS only 18 months). -->
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+
+    <PackageId>Protegey.Sdk</PackageId>
+    <Version>0.1.0</Version>
+    <Authors>Protegey</Authors>
+    <Description>Official Protegey SDK for .NET backends — transaction reporting, identity verification sessions, and webhook signature verification.</Description>
+    <PackageLicenseExpression>UNLICENSED</PackageLicenseExpression>
+    <RepositoryUrl>https://github.com/protegey/protegey_dotnet_sdk</RepositoryUrl>
+    <RootNamespace>Protegey.Sdk</RootNamespace>
+  </PropertyGroup>
+
+  <!-- Zero external dependencies — System.Net.Http.HttpClient and System.Text.Json are both
+       already in the .NET base class library, same "no HTTP library dependency" philosophy as
+       the Java SDK (which still needs Gson, since the JDK has no built-in JSON support; .NET's
+       BCL does, so this SDK needs nothing extra at all). -->
+
+</Project>
