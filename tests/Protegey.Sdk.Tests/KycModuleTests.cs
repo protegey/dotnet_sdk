@@ -35,6 +35,6 @@ public class KycModuleTests
 
         var result = await protegey.Kyc.GetSessionAsync("sess/1");
 
-        Assert.Equal("Approved", result["status"]);
+        Assert.Equal("APPROVED", result["status"]);
     }
 }
