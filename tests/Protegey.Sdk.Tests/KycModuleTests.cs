@@ -8,7 +8,7 @@ public class KycModuleTests
     {
         string response = method == "POST"
             ? "{\"sessionId\":\"sess_abc\",\"url\":\"https://verify.didit.me/session/abc\"}"
-            : "{\"sessionId\":\"sess_1\",\"status\":\"Approved\"}";
+            : "{\"sessionId\":\"sess_1\",\"status\":\"APPROVED\"}";
         context.Response.StatusCode = 200;
         context.Response.ContentType = "application/json";
         var bytes = System.Text.Encoding.UTF8.GetBytes(response);
