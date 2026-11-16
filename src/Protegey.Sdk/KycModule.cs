@@ -13,10 +13,24 @@ public sealed class KycModule
     /// Starts an identity verification session for one of your end users — no manual API call
     /// needed. Returns a dictionary with <c>sessionId</c> and <c>url</c> (the hosted verification
     /// link).
+    ///
+    /// <para><paramref name="email"/> and <paramref name="phone"/> are optional, never
+    /// Protegey-verified — trusted as given — and feed identity-resolution's cross-partner
+    /// matching. Omit either when unknown; they're only included in the request when
+    /// non-null.</para>
     /// </summary>
-    public Task<Dictionary<string, object?>> StartSessionAsync(string externalUserId, CancellationToken cancellationToken = default)
+    public Task<Dictionary<string, object?>> StartSessionAsync(string externalUserId, string? email = null, string? phone = null, CancellationToken cancellationToken = default)
     {
-        return _http.PostAsync("/partner-api/kyc/sessions", new Dictionary<string, object?> { ["externalUserId"] = externalUserId }, cancellationToken);
+        var body = new Dictionary<string, object?> { ["externalUserId"] = externalUserId };
+        if (email is not null)
+        {
+            body["email"] = email;
+        }
+        if (phone is not null)
+        {
+            body["phone"] = phone;
+        }
+        return _http.PostAsync("/partner-api/kyc/sessions", body, cancellationToken);
     }
 
     /// <summary>

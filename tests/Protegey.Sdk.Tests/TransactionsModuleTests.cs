@@ -8,7 +8,7 @@ public class TransactionsModuleTests
     public async Task ReportAsync_ReturnsTheDecision()
     {
         using var server = new FakeServer(201,
-            "{\"transactionId\":\"tx-1\",\"decision\":\"clear\",\"riskScore\":0,\"alerts\":[],\"deviceAction\":null}");
+            "{\"transactionId\":\"tx-1\",\"decision\":\"CLEAR\",\"riskScore\":0,\"alerts\":[],\"deviceAction\":null}");
         var protegey = new ProtegeyClient("key", server.BaseUrl);
 
         var result = await protegey.Transactions.ReportAsync(new Dictionary<string, object?>
@@ -21,14 +21,14 @@ public class TransactionsModuleTests
         });
 
         Assert.Equal("tx-1", result["transactionId"]);
-        Assert.Equal("clear", result["decision"]);
+        Assert.Equal("CLEAR", result["decision"]);
     }
 
     [Fact]
     public async Task ReportAsync_ForwardsChannelCounterpartyInstitutionCodeAndCounterpartyCountry()
     {
         using var server = new FakeServer(201,
-            "{\"transactionId\":\"tx-1\",\"decision\":\"clear\",\"riskScore\":0,\"alerts\":[],\"deviceAction\":null}");
+            "{\"transactionId\":\"tx-1\",\"decision\":\"CLEAR\",\"riskScore\":0,\"alerts\":[],\"deviceAction\":null}");
         var protegey = new ProtegeyClient("key", server.BaseUrl);
 
         await protegey.Transactions.ReportAsync(new Dictionary<string, object?>

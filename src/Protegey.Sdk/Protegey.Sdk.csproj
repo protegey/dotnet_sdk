@@ -9,7 +9,7 @@
     <LangVersion>latest</LangVersion>
 
     <PackageId>Protegey.Sdk</PackageId>
-    <Version>0.1.0</Version>
+    <Version>0.2.0</Version>
     <Authors>Protegey</Authors>
     <Description>Official Protegey SDK for .NET backends — transaction reporting, identity verification sessions, and webhook signature verification.</Description>
     <PackageLicenseExpression>UNLICENSED</PackageLicenseExpression>
