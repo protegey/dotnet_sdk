@@ -18,6 +18,10 @@ internal sealed class FakeServer : IDisposable
 
     public string BaseUrl { get; }
     public string? LastRequestBody { get; private set; }
+    public string? LastMethod { get; private set; }
+    /// <summary>Path plus raw (still-encoded) query string, e.g. <c>/partner-api/alerts?status=open</c>.</summary>
+    public string? LastPathAndQuery { get; private set; }
+    public string? LastApiKey { get; private set; }
 
     public FakeServer(Func<HttpListenerContext, string, Task> handler)
     {
@@ -57,6 +61,9 @@ internal sealed class FakeServer : IDisposable
 
             using var reader = new StreamReader(context.Request.InputStream);
             LastRequestBody = await reader.ReadToEndAsync().ConfigureAwait(false);
+            LastMethod = context.Request.HttpMethod;
+            LastPathAndQuery = context.Request.RawUrl;
+            LastApiKey = context.Request.Headers["x-api-key"];
             await _handler(context, context.Request.HttpMethod).ConfigureAwait(false);
             context.Response.OutputStream.Close();
         }
