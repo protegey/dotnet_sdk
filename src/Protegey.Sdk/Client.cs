@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Net.Http.Json;
 using System.Text.Json;
 
@@ -41,9 +42,26 @@ internal sealed class Client
         _http = httpClient ?? new HttpClient();
     }
 
-    public async Task<Dictionary<string, object?>> PostAsync(string path, Dictionary<string, object?> body, CancellationToken cancellationToken = default)
+    public Task<Dictionary<string, object?>> PostAsync(string path, Dictionary<string, object?>? body = null, CancellationToken cancellationToken = default)
+        => SendJsonAsync(HttpMethod.Post, path, body ?? new Dictionary<string, object?>(), cancellationToken);
+
+    public Task<Dictionary<string, object?>> PatchAsync(string path, Dictionary<string, object?> body, CancellationToken cancellationToken = default)
+        => SendJsonAsync(HttpMethod.Patch, path, body, cancellationToken);
+
+    public async Task<Dictionary<string, object?>> GetAsync(string path, Dictionary<string, object?>? query = null, CancellationToken cancellationToken = default)
     {
-        using var request = new HttpRequestMessage(HttpMethod.Post, _baseUrl + path)
+        using var request = new HttpRequestMessage(HttpMethod.Get, _baseUrl + path + BuildQuery(query));
+        request.Headers.Add("x-api-key", _apiKey);
+        return await SendAsync(request, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>Escapes one path segment (an id) — <c>Uri.EscapeDataString</c>, not
+    /// <c>WebUtility.UrlEncode</c>, which is form encoding (a space becomes "+").</summary>
+    public static string Segment(string value) => Uri.EscapeDataString(value);
+
+    private async Task<Dictionary<string, object?>> SendJsonAsync(HttpMethod method, string path, Dictionary<string, object?> body, CancellationToken cancellationToken)
+    {
+        using var request = new HttpRequestMessage(method, _baseUrl + path)
         {
             Content = JsonContent.Create(body, options: JsonOptions),
         };
@@ -51,11 +69,32 @@ internal sealed class Client
         return await SendAsync(request, cancellationToken).ConfigureAwait(false);
     }
 
-    public async Task<Dictionary<string, object?>> GetAsync(string path, CancellationToken cancellationToken = default)
+    private static string BuildQuery(Dictionary<string, object?>? query)
     {
-        using var request = new HttpRequestMessage(HttpMethod.Get, _baseUrl + path);
-        request.Headers.Add("x-api-key", _apiKey);
-        return await SendAsync(request, cancellationToken).ConfigureAwait(false);
+        if (query is null || query.Count == 0)
+        {
+            return "";
+        }
+
+        var parts = new List<string>();
+        foreach (var (key, value) in query)
+        {
+            if (value is null)
+            {
+                continue;
+            }
+            var text = value switch
+            {
+                string s => s,
+                bool b => b ? "true" : "false",
+                DateTime dt => (dt.Kind == DateTimeKind.Unspecified ? dt : dt.ToUniversalTime()).ToString("o", CultureInfo.InvariantCulture),
+                DateTimeOffset dto => dto.ToUniversalTime().ToString("o", CultureInfo.InvariantCulture),
+                IFormattable f => f.ToString(null, CultureInfo.InvariantCulture),
+                _ => value.ToString() ?? "",
+            };
+            parts.Add(Uri.EscapeDataString(key) + "=" + Uri.EscapeDataString(text));
+        }
+        return parts.Count == 0 ? "" : "?" + string.Join("&", parts);
     }
 
     private async Task<Dictionary<string, object?>> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
@@ -90,7 +129,10 @@ internal sealed class Client
                 not null => rawMessage.ToString()!,
                 null => "Request failed",
             };
-            throw new ProtegeyApiException((int)response.StatusCode, message);
+            // The 403 suspension / missing-contract guards send {errorCode, message} with no
+            // statusCode — surface errorCode so callers can branch on it without string matching.
+            var errorCode = data?.GetValueOrDefault("errorCode") as string;
+            throw new ProtegeyApiException((int)response.StatusCode, message, errorCode, data);
         }
 
         return data ?? new Dictionary<string, object?>();

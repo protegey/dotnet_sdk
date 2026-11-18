@@ -18,7 +18,7 @@ public class WebhookVerifierTests
     {
         const string secret = "whsec_test123";
         const string timestamp = "1700000000";
-        const string payload = "{\"event\":\"kyc.session.updated\"}";
+        const string payload = "{\"type\":\"kyc.status_changed\",\"eventId\":\"e1\",\"status\":\"APPROVED\"}";
         var signature = Sign(timestamp, payload, secret);
 
         Assert.True(WebhookVerifier.Verify(payload, timestamp, signature, secret));
@@ -38,9 +38,41 @@ public class WebhookVerifierTests
     public void Verify_RejectsAWrongSecret()
     {
         const string timestamp = "1700000000";
-        const string payload = "{\"event\":\"kyc.session.updated\"}";
+        const string payload = "{\"type\":\"kyc.status_changed\",\"eventId\":\"e1\",\"status\":\"APPROVED\"}";
         var signature = Sign(timestamp, payload, "whsec_correct");
 
         Assert.False(WebhookVerifier.Verify(payload, timestamp, signature, "whsec_wrong"));
+    }
+
+    [Fact]
+    public void Verify_AcceptsAnUppercaseHexSignature()
+    {
+        const string secret = "secret";
+        const string timestamp = "1700000000";
+        const string payload = "{\"type\":\"webhook.test\"}";
+
+        Assert.True(WebhookVerifier.Verify(payload, timestamp, Sign(timestamp, payload, secret).ToUpperInvariant(), secret));
+    }
+
+    [Fact]
+    public void Verify_RejectsAMissingSignatureOrTimestamp()
+    {
+        const string payload = "{\"type\":\"webhook.test\"}";
+        var signature = Sign("1700000000", payload, "secret");
+
+        Assert.False(WebhookVerifier.Verify(payload, "1700000000", "", "secret"));
+        Assert.False(WebhookVerifier.Verify(payload, "", signature, "secret"));
+        Assert.False(WebhookVerifier.Verify(payload, "1700000001", signature, "secret"));
+    }
+
+    [Fact]
+    public void EventTypes_MatchTheWireValues()
+    {
+        Assert.Equal("kyc.status_changed", WebhookEventTypes.KycStatusChanged);
+        Assert.Equal("kyb.status_changed", WebhookEventTypes.KybStatusChanged);
+        Assert.Equal("alert.created", WebhookEventTypes.AlertCreated);
+        Assert.Equal("alert.status_changed", WebhookEventTypes.AlertStatusChanged);
+        Assert.Equal("transaction.blocked", WebhookEventTypes.TransactionBlocked);
+        Assert.Equal("webhook.test", WebhookEventTypes.WebhookTest);
     }
 }

@@ -9,9 +9,9 @@
     <LangVersion>latest</LangVersion>
 
     <PackageId>Protegey.Sdk</PackageId>
-    <Version>0.2.0</Version>
+    <Version>0.3.0</Version>
     <Authors>Protegey</Authors>
-    <Description>Official Protegey SDK for .NET backends — transaction reporting, identity verification sessions, and webhook signature verification.</Description>
+    <Description>Official Protegey SDK for .NET backends — the full partner API (KYC, KYB, transactions, alerts, device and behavioral events, sanctions screening, shared fraud signals) and webhook signature verification.</Description>
     <PackageLicenseExpression>UNLICENSED</PackageLicenseExpression>
     <RepositoryUrl>https://github.com/protegey/protegey_dotnet_sdk</RepositoryUrl>
     <RootNamespace>Protegey.Sdk</RootNamespace>
@@ -21,5 +21,9 @@
        already in the .NET base class library, same "no HTTP library dependency" philosophy as
        the Java SDK (which still needs Gson, since the JDK has no built-in JSON support; .NET's
        BCL does, so this SDK needs nothing extra at all). -->
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Protegey.Sdk.Tests" />
+  </ItemGroup>
 
 </Project>
