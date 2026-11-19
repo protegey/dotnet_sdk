@@ -2,7 +2,7 @@ namespace Protegey.Sdk;
 
 /// <summary>
 /// The Protegey SDK for .NET backends — every <c>/partner-api</c> endpoint (KYC, KYB,
-/// transactions, alerts, device and behavioral events, sanctions screening, shared fraud
+/// transactions, cash deposits, alerts, device and behavioral events, sanctions screening, shared fraud
 /// signals), called directly from your server with your own API key (<c>x-api-key</c>), plus a
 /// webhook signature verifier. Sandbox vs live is decided solely by which key you pass.
 ///
@@ -31,6 +31,7 @@ namespace Protegey.Sdk;
 public sealed class ProtegeyClient
 {
     public TransactionsModule Transactions { get; }
+    public CashDepositsModule CashDeposits { get; }
     public AlertsModule Alerts { get; }
     public KycModule Kyc { get; }
     public KybModule Kyb { get; }
@@ -51,6 +52,7 @@ public sealed class ProtegeyClient
     {
         var http = new Client(apiKey, baseUrl, httpClient);
         Transactions = new TransactionsModule(http);
+        CashDeposits = new CashDepositsModule(http);
         Alerts = new AlertsModule(http);
         Kyc = new KycModule(http);
         Kyb = new KybModule(http);

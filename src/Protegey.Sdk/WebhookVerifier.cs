@@ -41,14 +41,16 @@ public static class WebhookVerifier
 /// <summary>Values of the <c>type</c> field on Protegey webhook payloads.</summary>
 public static class WebhookEventTypes
 {
-    /// <summary>A biometric result was applied. Payload: <c>externalUserId</c>, <c>status</c>
-    /// (<c>APPROVED</c>|<c>IN_REVIEW</c>|<c>DECLINED</c>), <c>decision</c>. Its <c>sessionId</c> is
-    /// always null — correlate on <c>externalUserId</c>. Not sent for a manual PATCH.</summary>
+    /// <summary>A biometric result was applied, or the status was changed manually (portal or
+    /// <c>PATCH /partner-api/kyc/sessions/{id}</c>). Payload: <c>sessionId</c> (the same id the API
+    /// returns), <c>externalUserId</c>, <c>status</c> (<c>APPROVED</c>|<c>IN_REVIEW</c>|<c>DECLINED</c>),
+    /// <c>recommendation</c> (<c>APPROVE</c>|<c>REVIEW</c>|<c>REJECT</c>|null), <c>decision</c>
+    /// (with <c>manualReview</c> after a manual change).</summary>
     public const string KycStatusChanged = "kyc.status_changed";
 
     /// <summary>A KYB application was decided. Payload: <c>clientId</c>, <c>status</c>
     /// (<c>ACTIVE</c>|<c>REJECTED</c>|<c>MORE_INFO_REQUIRED</c>), <c>submissionStatus</c>
-    /// (lowercase), <c>decision</c> (<c>APPROVE</c>|<c>REJECT</c>|<c>REQUEST_MORE_INFO</c>).</summary>
+    /// (UPPER_SNAKE_CASE, e.g. <c>APPROVED</c>), <c>decision</c> (<c>APPROVE</c>|<c>REJECT</c>|<c>REQUEST_MORE_INFO</c>).</summary>
     public const string KybStatusChanged = "kyb.status_changed";
 
     /// <summary>Payload: <c>alertId</c>, <c>ruleCode</c>, <c>externalCustomerId</c>,

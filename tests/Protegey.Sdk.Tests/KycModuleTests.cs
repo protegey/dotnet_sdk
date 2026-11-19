@@ -96,4 +96,59 @@ public class KycModuleTests
         Assert.Equal("secret-key", server.LastApiKey);
         Assert.Equal("/partner-api/kyc/sessions/a%20b", server.LastPathAndQuery);
     }
+
+    [Fact]
+    public async Task ListSessionsAsync_SendsTheExactExternalUserIdFilterAndExposesRecommendationAndImages()
+    {
+        using var server = new FakeServer(200,
+            "{\"data\":[{\"sessionId\":\"s1\",\"externalUserId\":\"cust 9981\",\"status\":\"IN_REVIEW\",\"outcome\":\"MANUAL\"," +
+            "\"recommendation\":\"REVIEW\",\"createdAt\":\"2026-11-19T12:00:00.000Z\"," +
+            "\"images\":{\"documentFront\":{\"url\":\"https://s3.example/front.jpg?sig=1\",\"expiresAt\":\"2026-11-19T13:00:00.000Z\"}," +
+            "\"documentBack\":null,\"selfie\":null,\"documentFaceCrop\":null}}],\"total\":1,\"page\":1,\"limit\":20,\"totalPages\":1}");
+        var protegey = new ProtegeyClient("key", server.BaseUrl);
+
+        var result = await protegey.Kyc.ListSessionsAsync(new Dictionary<string, object?> { ["externalUserId"] = "cust 9981" });
+
+        Assert.Equal("/partner-api/kyc/sessions?externalUserId=cust%209981", server.LastPathAndQuery);
+        var row = Assert.IsType<Dictionary<string, object?>>(Assert.Single(Assert.IsType<List<object?>>(result["data"])));
+        Assert.Equal("REVIEW", row["recommendation"]);
+        var images = Assert.IsType<Dictionary<string, object?>>(row["images"]);
+        var front = Assert.IsType<Dictionary<string, object?>>(images["documentFront"]);
+        Assert.Equal("https://s3.example/front.jpg?sig=1", front["url"]);
+        Assert.Equal("2026-11-19T13:00:00.000Z", front["expiresAt"]);
+        Assert.Null(images["selfie"]);
+    }
+
+    [Fact]
+    public async Task GetSessionAsync_ExposesRecommendationAndPresignedImages()
+    {
+        using var server = new FakeServer(200,
+            "{\"sessionId\":\"s1\",\"status\":\"APPROVED\",\"outcome\":\"MANUAL\",\"recommendation\":\"REVIEW\"," +
+            "\"images\":{\"documentFront\":null,\"documentBack\":null,\"selfie\":{\"url\":\"https://s3.example/selfie.jpg\",\"expiresAt\":\"2026-11-19T13:00:00.000Z\"},\"documentFaceCrop\":null}}");
+        var protegey = new ProtegeyClient("key", server.BaseUrl);
+
+        var result = await protegey.Kyc.GetSessionAsync("s1");
+
+        Assert.Equal("REVIEW", result["recommendation"]);
+        var images = Assert.IsType<Dictionary<string, object?>>(result["images"]);
+        Assert.Equal("https://s3.example/selfie.jpg", Assert.IsType<Dictionary<string, object?>>(images["selfie"])["url"]);
+    }
+
+    [Fact]
+    public async Task UpdateSessionAsync_SendsStatusAndReviewNoteAndReturnsTheManualReview()
+    {
+        using var server = new FakeServer(200,
+            "{\"sessionId\":\"s1\",\"status\":\"DECLINED\",\"outcome\":\"MANUAL\",\"recommendation\":\"REVIEW\"," +
+            "\"decision\":{\"manualReview\":{\"reviewedBy\":\"Partner API\",\"previousStatus\":\"IN_REVIEW\",\"newStatus\":\"DECLINED\",\"note\":\"Expired ID\"}}}");
+        var protegey = new ProtegeyClient("key", server.BaseUrl);
+
+        var result = await protegey.Kyc.UpdateSessionAsync("s1", new Dictionary<string, object?> { ["status"] = "DECLINED", ["reviewNote"] = "Expired ID" });
+
+        Assert.Equal("{\"status\":\"DECLINED\",\"reviewNote\":\"Expired ID\"}", server.LastRequestBody);
+        Assert.Equal("REVIEW", result["recommendation"]);
+        var decision = Assert.IsType<Dictionary<string, object?>>(result["decision"]);
+        var review = Assert.IsType<Dictionary<string, object?>>(decision["manualReview"]);
+        Assert.Equal("IN_REVIEW", review["previousStatus"]);
+        Assert.Equal("DECLINED", review["newStatus"]);
+    }
 }

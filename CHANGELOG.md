@@ -1,3 +1,22 @@
+## 0.4.0
+
+Aligned with the partner API on backend `dev` (2026-11-19).
+
+- New `CashDeposits` module: `RecordAsync` (`POST /partner-api/cash-deposits`), `ListAsync`
+  (filters `page`, `limit` ≤ 100, `dateFrom`, `dateTo`, `externalCustomerId`, `minAmount`,
+  `maxAmount`, `currency`, `channel`, `decision`, `branchId`, `agentId`) and `GetAsync` (Protegey id
+  or `externalTransactionId`). A reused `externalTransactionId` answers 409; `amount` comes back as
+  a decimal string.
+- `Kyc`: documented `recommendation` (`APPROVE`|`REVIEW`|`REJECT`|null) and the `images` block
+  (`documentFront`, `documentBack`, `selfie`, `documentFaceCrop`, each `{url, expiresAt}` or null,
+  pre-signed for 1 hour and re-issued on every GET) on the list and detail responses, the new
+  `externalUserId` exact-match list filter, and `recommendation` + `decision.manualReview` on the
+  `UpdateSessionAsync` response.
+- Docs fix: `kyc.status_changed` is also sent on manual status changes, its `sessionId` is the
+  session id (it was wrongly documented as always null), and it carries `recommendation`.
+  `kyb.status_changed.submissionStatus` and `manualReview.previousStatus/newStatus` are
+  UPPER_SNAKE_CASE. Retries: 5 attempts over about 3 h, deduplicate on `eventId`.
+
 ## 0.3.0
 
 Brings the SDK in line with the current partner API (all 23 `/partner-api` endpoints).
