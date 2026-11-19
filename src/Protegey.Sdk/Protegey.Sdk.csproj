@@ -9,9 +9,9 @@
     <LangVersion>latest</LangVersion>
 
     <PackageId>Protegey.Sdk</PackageId>
-    <Version>0.3.0</Version>
+    <Version>0.4.0</Version>
     <Authors>Protegey</Authors>
-    <Description>Official Protegey SDK for .NET backends — the full partner API (KYC, KYB, transactions, alerts, device and behavioral events, sanctions screening, shared fraud signals) and webhook signature verification.</Description>
+    <Description>Official Protegey SDK for .NET backends — the full partner API (KYC, KYB, transactions, cash deposits, alerts, device and behavioral events, sanctions screening, shared fraud signals) and webhook signature verification.</Description>
     <PackageLicenseExpression>UNLICENSED</PackageLicenseExpression>
     <RepositoryUrl>https://github.com/protegey/protegey_dotnet_sdk</RepositoryUrl>
     <RootNamespace>Protegey.Sdk</RootNamespace>

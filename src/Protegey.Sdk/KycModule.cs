@@ -7,7 +7,13 @@ namespace Protegey.Sdk;
 /// <para>Wire values of <c>status</c>: <c>NOT_STARTED</c>, <c>IN_PROGRESS</c>, <c>AWAITING_USER</c>,
 /// <c>IN_REVIEW</c>, <c>APPROVED</c>, <c>DECLINED</c>, <c>RESUBMITTED</c>, <c>ABANDONED</c>,
 /// <c>EXPIRED</c>, <c>KYC_EXPIRED</c>. <c>outcome</c>: <c>SUCCESS</c>, <c>MANUAL</c>, <c>FAILED</c>
-/// or null.</para>
+/// or null. <c>recommendation</c>: <c>APPROVE</c>, <c>REVIEW</c>, <c>REJECT</c> or null —
+/// Protegey's own verdict, never changed by a manual override; <c>status</c> is the final
+/// decision.</para>
+///
+/// <para><c>images</c> (list and detail): <c>{documentFront, documentBack, selfie,
+/// documentFaceCrop}</c>, each <c>{url, expiresAt}</c> or null — pre-signed links valid 1 hour and
+/// re-issued on every GET, so fetch again rather than storing them.</para>
 /// </summary>
 public sealed class KycModule
 {
@@ -21,11 +27,15 @@ public sealed class KycModule
     /// <summary>
     /// <c>GET /partner-api/kyc/sessions</c> — paginated
     /// (<c>{data, total, page, limit, totalPages}</c>). Optional query keys: <c>page</c>,
-    /// <c>limit</c> (1–100), <c>status</c>, <c>search</c> (matches fullName or externalUserId).
+    /// <c>limit</c> (1–100), <c>status</c>, <c>search</c> (partial match on fullName or
+    /// externalUserId), <c>externalUserId</c> (exact, case-sensitive match on your own id).
     ///
-    /// <para>The API only accepts <c>status</c> in its internal Title Case form
-    /// (<c>"In Review"</c>) and rejects the UPPER_SNAKE_CASE form it returns; pass either and the
-    /// SDK converts it (<c>"IN_REVIEW"</c> → <c>"In Review"</c>).</para>
+    /// <para>Each row: <c>sessionId</c>, <c>externalUserId</c>, <c>status</c>, <c>outcome</c>,
+    /// <c>recommendation</c>, <c>fullName</c>, <c>documentType</c>, <c>country</c>,
+    /// <c>createdAt</c>, <c>images</c> (no base64 photos, no scores).</para>
+    ///
+    /// <para>The SDK sends <c>status</c> in Title Case (<c>"IN_REVIEW"</c> → <c>"In Review"</c>),
+    /// which every API version accepts; current versions accept the UPPER_SNAKE_CASE form too.</para>
     /// </summary>
     public Task<Dictionary<string, object?>> ListSessionsAsync(Dictionary<string, object?>? query = null, CancellationToken cancellationToken = default)
     {
@@ -62,13 +72,13 @@ public sealed class KycModule
 
     /// <summary>
     /// <c>GET /partner-api/kyc/sessions/{sessionId}</c> — full session: <c>status</c>,
-    /// <c>outcome</c>, <c>decision</c> (null until a result exists), extracted identity fields,
-    /// scores and base64 photos (<c>documentPhoto</c>, <c>documentBackPhoto</c>,
-    /// <c>selfiePhoto</c>, <c>documentFaceCrop</c>; may arrive a couple of minutes after the
-    /// decision).
+    /// <c>outcome</c>, <c>recommendation</c>, <c>decision</c> (null until a result exists),
+    /// extracted identity fields, scores, <c>images</c> (pre-signed links, see above) and the older
+    /// base64 photos (<c>documentPhoto</c>, <c>documentBackPhoto</c>, <c>selfiePhoto</c>,
+    /// <c>documentFaceCrop</c>), kept for backward compatibility.
     ///
-    /// <para>Also the reliable way to correlate a <c>kyc.status_changed</c> webhook: that payload's
-    /// <c>sessionId</c> is always null, so match on <c>externalUserId</c> and then poll here.</para>
+    /// <para>Polling fallback for the <c>kyc.status_changed</c> webhook, whose <c>sessionId</c> is
+    /// this same id.</para>
     /// </summary>
     public Task<Dictionary<string, object?>> GetSessionAsync(string sessionId, CancellationToken cancellationToken = default)
         => _http.GetAsync("/partner-api/kyc/sessions/" + Client.Segment(sessionId), null, cancellationToken);
@@ -79,8 +89,10 @@ public sealed class KycModule
     /// <c>documentType</c>, <c>idDocumentNumber</c>, <c>sex</c>, <c>dateOfBirth</c>,
     /// <c>placeOfBirth</c>, <c>profession</c>, <c>dateOfIssue</c>, <c>dateOfExpiration</c>,
     /// <c>status</c> (<c>"APPROVED"</c>|<c>"DECLINED"</c>|<c>"IN_REVIEW"</c>), <c>reviewNote</c>.
-    /// Returns <c>{sessionId, externalUserId, status, outcome, decision}</c>. No webhook fires for
-    /// a manual override.
+    /// Returns <c>{sessionId, externalUserId, status, outcome, recommendation, decision}</c>. A
+    /// status change is recorded as <c>decision.manualReview</c> (<c>reviewedBy</c> =
+    /// <c>"Partner API"</c>, <c>reviewedAt</c>, <c>previousStatus</c> / <c>newStatus</c> in
+    /// UPPER_SNAKE_CASE, <c>note</c>) and sends a <c>kyc.status_changed</c> webhook.
     /// </summary>
     public Task<Dictionary<string, object?>> UpdateSessionAsync(string sessionId, Dictionary<string, object?> fields, CancellationToken cancellationToken = default)
         => _http.PatchAsync("/partner-api/kyc/sessions/" + Client.Segment(sessionId), fields, cancellationToken);

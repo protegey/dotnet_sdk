@@ -1,7 +1,7 @@
 # Protegey.Sdk (.NET)
 
 Official Protegey SDK for .NET backends. It covers the whole partner API (KYC sessions, KYB
-applicants, transaction monitoring, alerts, device and behavioral events, sanctions screening,
+applicants, transaction monitoring, cash deposits, alerts, device and behavioral events, sanctions screening,
 the shared fraud signal network) plus webhook signature verification. You call it directly from
 your server with your own API key.
 
@@ -40,10 +40,11 @@ pass** — there is no flag or header for it. Sandbox is capped at 100 transacti
 sessions per day (UTC). List methods are paginated: `page`, `limit` (1–100) in, `{data, total,
 page, limit, totalPages}` out.
 
-Status-like values (`status`, `decision`, `decisionVerdict`, `disposition`, `deviceAction`,
-`action`, `category`, `outcome`, `confidenceTier`, `ruleDecision`) come back in
-UPPER_SNAKE_CASE. Other enums (`ruleSeverity`, `priority`, `source`, `direction`,
-`submissionStatus`, …) are returned as the API stores them.
+Status-like values (`status`, `submissionStatus`, `previousStatus`, `newStatus`, `decision`,
+`decisionVerdict`, `disposition`, `deviceAction`, `action`, `category`, `outcome`,
+`confidenceTier`, `ruleDecision`) come back in UPPER_SNAKE_CASE, in responses and webhooks alike.
+Other enums (`ruleSeverity`, `priority`, `source`, `direction`, …) are returned as the API
+stores them.
 
 ```csharp
 using Protegey.Sdk;
@@ -67,6 +68,22 @@ var result = await protegey.Transactions.ReportAsync(new Dictionary<string, obje
 var page = await protegey.Transactions.ListAsync(new() { ["decision"] = "BLOCKED", ["limit"] = 50 });
 var tx = await protegey.Transactions.GetAsync("tx-00234"); // Protegey id or your external id
 
+// Cash deposits — returns {cashDepositId, externalTransactionId, decision, riskScore, alerts[]}
+var deposit = await protegey.CashDeposits.RecordAsync(new Dictionary<string, object?>
+{
+    ["externalTransactionId"] = "dep-0001", // optional; makes retries safe — a duplicate answers 409
+    ["externalCustomerId"] = "cust-9981",
+    ["amount"] = 2500000,
+    ["currency"] = "XOF",
+    ["channel"] = "BRANCH",
+    ["branchId"] = "DKR-PLATEAU",
+    ["depositorName"] = "Moussa Traoré",    // who brought the cash, if not the account holder
+    // depositedAt defaults to now when omitted
+});
+var deposits = await protegey.CashDeposits.ListAsync(new() { ["dateFrom"] = "2026-11-01", ["minAmount"] = 1000000, ["channel"] = "BRANCH" });
+var one = await protegey.CashDeposits.GetAsync("dep-0001"); // Protegey id or your externalTransactionId
+// one["amount"] is a decimal string ("2500000.00"), not a number
+
 // Alerts
 var open = await protegey.Alerts.ListAsync(new() { ["status"] = "OPEN" }); // SDK lowercases the filter for you
 await protegey.Alerts.UpdateAsync("alert-uuid", new() { ["status"] = "CONFIRMED", ["disposition"] = "CONFIRMED_FRAUD" });
@@ -77,7 +94,12 @@ await protegey.Alerts.FlagTransactionAsync((string)result["transactionId"]!); //
 var session = await protegey.Kyc.StartSessionAsync("cust-9981", email: "awa@example.com");
 // Send session["url"] (single-use, valid 30 minutes) to your user however you like
 var current = await protegey.Kyc.GetSessionAsync((string)session["sessionId"]!);
-var inReview = await protegey.Kyc.ListSessionsAsync(new() { ["status"] = "IN_REVIEW" }); // SDK converts to the API's "In Review"
+// current["status"] is the final decision; current["recommendation"] (APPROVE | REVIEW | REJECT | null)
+// is Protegey's own verdict and never changes after a manual override.
+// current["images"]: {documentFront, documentBack, selfie, documentFaceCrop}, each {url, expiresAt} or null —
+// pre-signed links valid 1 hour, re-issued on every GET (don't store them).
+var inReview = await protegey.Kyc.ListSessionsAsync(new() { ["status"] = "IN_REVIEW" });
+var forCustomer = await protegey.Kyc.ListSessionsAsync(new() { ["externalUserId"] = "cust-9981" }); // exact match
 await protegey.Kyc.UpdateSessionAsync((string)session["sessionId"]!, new() { ["status"] = "APPROVED", ["reviewNote"] = "Checked manually" });
 var fresh = await protegey.Kyc.ResendSessionAsync((string)session["sessionId"]!);
 
@@ -100,8 +122,8 @@ await protegey.DeviceEvents.RecordAsync(new() { ["eventId"] = "evt-1", ["visitor
 await protegey.BehavioralEvents.RecordAsync(new() { ["externalCustomerId"] = "cust-9981", ["sessionId"] = "app-session-1" });
 ```
 
-Wire-format quirks the SDK handles for you: the KYC list `status` filter only accepts Title Case
-(`"In Review"`), the alert list `status`/`disposition` filters and the sanctions `type` only
+Wire-format quirks the SDK handles for you: the KYC list `status` filter is sent in Title Case
+(`"In Review"`), which every API version accepts, the alert list `status`/`disposition` filters and the sanctions `type` only
 accept lowercase. KYB responses currently also include two internal fields (`tokenHash`,
 `documentFilePath`); the SDK strips them.
 
@@ -127,9 +149,11 @@ if (!WebhookVerifier.Verify(payload, timestamp, signature, yourWebhookSecret))
 }
 ```
 
-`kyc.status_changed` carries `externalUserId` but its `sessionId` is always null — correlate on
-`externalUserId`, then call `Kyc.GetSessionAsync` / `Kyc.ListSessionsAsync`. It does not fire
-for a manual `UpdateSessionAsync` status override.
+`kyc.status_changed` fires on a FaceTec result and on every manual status change (portal or
+`UpdateSessionAsync`). Its `sessionId` is the same id `StartSessionAsync` returns, and it carries
+`externalUserId`, `status`, `recommendation` and `decision` (with `decision.manualReview` after a
+manual change, `previousStatus` / `newStatus` in UPPER_SNAKE_CASE). `kyb.status_changed` carries
+`submissionStatus` in UPPER_SNAKE_CASE. `Kyc.GetSessionAsync` stays the polling fallback.
 
 ## `baseUrl` — no default, on purpose
 
