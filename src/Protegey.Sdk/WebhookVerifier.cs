@@ -41,7 +41,7 @@ public static class WebhookVerifier
 /// <summary>Values of the <c>type</c> field on Protegey webhook payloads.</summary>
 public static class WebhookEventTypes
 {
-    /// <summary>A FaceTec result was applied, or the status was changed manually (portal or
+    /// <summary>An automated verification result was applied, or the status was changed manually (portal or
     /// <c>PATCH /partner-api/kyc/sessions/{id}</c>). Payload: <c>sessionId</c> (the same id the API
     /// returns), <c>externalUserId</c>, <c>status</c> (<c>APPROVED</c>|<c>IN_REVIEW</c>|<c>DECLINED</c>),
     /// <c>recommendation</c> (<c>APPROVE</c>|<c>REVIEW</c>|<c>REJECT</c>|null), <c>decision</c>
