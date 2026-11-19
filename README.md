@@ -149,7 +149,7 @@ if (!WebhookVerifier.Verify(payload, timestamp, signature, yourWebhookSecret))
 }
 ```
 
-`kyc.status_changed` fires on a biometric result and on every manual status change (portal or
+`kyc.status_changed` fires on an automated verification result and on every manual status change (portal or
 `UpdateSessionAsync`). Its `sessionId` is the same id `StartSessionAsync` returns, and it carries
 `externalUserId`, `status`, `recommendation` and `decision` (with `decision.manualReview` after a
 manual change, `previousStatus` / `newStatus` in UPPER_SNAKE_CASE). `kyb.status_changed` carries
