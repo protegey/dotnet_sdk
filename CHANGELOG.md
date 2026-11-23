@@ -1,3 +1,12 @@
+## 0.5.0
+
+- New `Liveness` module — 3D liveness, a separate paid product (KYC is unaffected):
+  `StartSessionAsync` (selfie-only liveness check), `StartReverificationAsync` (liveness, then a
+  3D:3D match against the customer's KYC face), `GetSessionAsync` and `ListSessionsAsync`. Each
+  start returns a hosted single-use `url`, valid 30 minutes.
+- A reverification of someone with no KYC face on record throws a 400 `ProtegeyApiException`
+  whose `ErrorCode` is `LivenessErrorCodes.No3DEnrollment` (`NO_3D_ENROLLMENT`).
+
 ## 0.4.0
 
 Aligned with the partner API on backend `dev` (2026-11-19).
