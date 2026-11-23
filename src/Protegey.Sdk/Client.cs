@@ -129,8 +129,9 @@ internal sealed class Client
                 not null => rawMessage.ToString()!,
                 null => "Request failed",
             };
-            // The 403 suspension / missing-contract guards send {errorCode, message} with no
-            // statusCode — surface errorCode so callers can branch on it without string matching.
+            // Any error may carry {errorCode, message} (403 suspension / missing-contract guards,
+            // 400 NO_3D_ENROLLMENT, ...) — surface errorCode for every status so callers can
+            // branch on it without string matching.
             var errorCode = data?.GetValueOrDefault("errorCode") as string;
             throw new ProtegeyApiException((int)response.StatusCode, message, errorCode, data);
         }

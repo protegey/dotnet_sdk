@@ -1,7 +1,7 @@
 # Protegey.Sdk (.NET)
 
 Official Protegey SDK for .NET backends. It covers the whole partner API (KYC sessions, KYB
-applicants, transaction monitoring, cash deposits, alerts, device and behavioral events, sanctions screening,
+applicants, 3D liveness, transaction monitoring, cash deposits, alerts, device and behavioral events, sanctions screening,
 the shared fraud signal network) plus webhook signature verification. You call it directly from
 your server with your own API key.
 
@@ -32,8 +32,9 @@ Source: [github.com/protegey/protegey_dotnet_sdk](https://github.com/protegey/pr
 Every method maps 1:1 onto one `/partner-api` endpoint, takes plain dictionaries and returns the
 parsed JSON as `Dictionary<string, object?>` (every number comes back as `double`, arrays as
 `List<object?>`, objects as `Dictionary<string, object?>`). All validation stays server-side; a
-non-2xx response throws `ProtegeyApiException` (`Status`, `Message`, and `ErrorCode` —
-`PARTNER_SUSPENDED` / `PARTNER_CONTRACT_REQUIRED` on the 403s that carry one).
+non-2xx response throws `ProtegeyApiException` (`Status`, `Message`, and `ErrorCode` whenever the
+body carries one — e.g. `PARTNER_SUSPENDED` / `PARTNER_CONTRACT_REQUIRED` on some 403s,
+`NO_3D_ENROLLMENT` on a 400 from 3D liveness re-verification).
 
 Authentication is the `x-api-key` header. **Sandbox vs live is decided only by which key you
 pass** — there is no flag or header for it. Sandbox is capped at 100 transactions and 10 KYC
@@ -126,6 +127,35 @@ Wire-format quirks the SDK handles for you: the KYC list `status` filter is sent
 (`"In Review"`), which every API version accepts, the alert list `status`/`disposition` filters and the sanctions `type` only
 accept lowercase. KYB responses currently also include two internal fields (`tokenHash`,
 `documentFilePath`); the SDK strips them.
+
+## 3D liveness
+
+A separate, paid product (billed per check where liveness was proven) — KYC is unaffected and
+stays free. Two modes: `LIVENESS` (selfie-only 3D liveness check) and `REVERIFICATION` (liveness,
+then a 3D:3D match against the face of that customer's latest KYC verification). `mode` and
+`status` (`PENDING` | `COMPLETED` | `EXPIRED`) are UPPERCASE on the wire.
+
+```csharp
+// Selfie-only liveness — externalUserId is optional
+var check = await protegey.Liveness.StartSessionAsync("cust-9981");
+// Send check["url"] (single-use, valid 30 minutes) to your user, or open it for them
+
+// Re-verify a returning customer against their KYC face
+try
+{
+    var reverify = await protegey.Liveness.StartReverificationAsync("cust-9981");
+}
+catch (ProtegeyApiException e) when (e.ErrorCode == LivenessErrorCodes.No3DEnrollment)
+{
+    // 400 — no KYC face on record for this user: run a KYC session first
+}
+
+var result = await protegey.Liveness.GetSessionAsync((string)check["sessionId"]!);
+// result["livenessProven"] (bool or null), result["matchLevel"] (0 different person, 15 same person),
+// result["matched"] (reverification only); billing: result["billableChecks"], result["amount"]
+// (decimal string, USD), result["checks"][] per attempt
+var history = await protegey.Liveness.ListSessionsAsync(new() { ["externalUserId"] = "cust-9981", ["mode"] = "REVERIFICATION" });
+```
 
 ## Webhooks
 
