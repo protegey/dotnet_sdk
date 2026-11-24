@@ -17,15 +17,15 @@ Targets .NET 8+. Zero external dependencies — built entirely on `System.Net.Ht
 Not yet published to NuGet.org — install directly from GitHub for now:
 
 ```bash
-git clone https://github.com/protegey/protegey_dotnet_sdk.git
-cd protegey_dotnet_sdk
+git clone https://github.com/protegey/dotnet_sdk.git
+cd dotnet_sdk
 dotnet pack src/Protegey.Sdk -c Release
 # then reference the produced .nupkg from src/Protegey.Sdk/bin/Release/ in your own project,
 # e.g. via a local NuGet feed, or just add a ProjectReference to src/Protegey.Sdk if you're
 # vendoring the source directly.
 ```
 
-Source: [github.com/protegey/protegey_dotnet_sdk](https://github.com/protegey/protegey_dotnet_sdk)
+Source: [github.com/protegey/dotnet_sdk](https://github.com/protegey/dotnet_sdk)
 
 ## Usage
 
@@ -132,7 +132,7 @@ accept lowercase. KYB responses currently also include two internal fields (`tok
 
 A separate, paid product (billed per check where liveness was proven) — KYC is unaffected and
 stays free. Two modes: `LIVENESS` (selfie-only 3D liveness check) and `REVERIFICATION` (liveness,
-then a 3D:3D match against the face of that customer's latest KYC verification). `mode` and
+then a face match against the face of that customer's latest KYC verification). `mode` and
 `status` (`PENDING` | `COMPLETED` | `EXPIRED`) are UPPERCASE on the wire.
 
 ```csharp
@@ -151,7 +151,7 @@ catch (ProtegeyApiException e) when (e.ErrorCode == LivenessErrorCodes.No3DEnrol
 }
 
 var result = await protegey.Liveness.GetSessionAsync((string)check["sessionId"]!);
-// result["livenessProven"] (bool or null), result["matchLevel"] (0 different person, 15 same person),
+// result["livenessProven"] (bool or null), result["matchLevel"] (higher means a stronger match; 0 means a different person),
 // result["matched"] (reverification only); billing: result["billableChecks"], result["amount"]
 // (decimal string, USD), result["checks"][] per attempt
 var history = await protegey.Liveness.ListSessionsAsync(new() { ["externalUserId"] = "cust-9981", ["mode"] = "REVERIFICATION" });

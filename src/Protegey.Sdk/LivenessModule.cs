@@ -8,7 +8,7 @@ namespace Protegey.Sdk;
 /// and stays free.</para>
 ///
 /// <para>Two modes (UPPERCASE on the wire): <c>LIVENESS</c> — a selfie-only 3D liveness check;
-/// <c>REVERIFICATION</c> — the same liveness check, then a 3D:3D match against the face of that
+/// <c>REVERIFICATION</c> — the same liveness check, then a face match against the face of that
 /// customer's latest KYC verification. <c>status</c>: <c>PENDING</c>, <c>COMPLETED</c>,
 /// <c>EXPIRED</c>.</para>
 /// </summary>
@@ -40,7 +40,7 @@ public sealed class LivenessModule
     }
 
     /// <summary>
-    /// Starts a <c>REVERIFICATION</c> session: a 3D liveness check, then a 3D:3D match against the
+    /// Starts a <c>REVERIFICATION</c> session: a 3D liveness check, then a face match against the
     /// face of <paramref name="externalUserId"/>'s latest KYC verification — or of
     /// <paramref name="referenceVerificationId"/> when given (only included when non-null). Same
     /// response as <see cref="StartSessionAsync"/>.
@@ -66,8 +66,8 @@ public sealed class LivenessModule
     /// <summary>
     /// <c>GET /partner-api/liveness/sessions/{sessionId}</c> — <c>id</c>, <c>sessionId</c>,
     /// <c>mode</c>, <c>status</c>, <c>externalUserId</c>, <c>referenceEnrollmentId</c>,
-    /// <c>livenessProven</c> (bool or null), <c>matchLevel</c> (number or null: 0 = different
-    /// person, 15 = same person), <c>matched</c> (bool or null, reverification only),
+    /// <c>livenessProven</c> (bool or null), <c>matchLevel</c> (number or null: higher means a
+    /// stronger match; 0 means a different person), <c>matched</c> (bool or null, reverification only),
     /// <c>duplicateFaceEnrollmentIds</c> (not currently populated), <c>attempts</c>,
     /// <c>isSandbox</c>, <c>completedAt</c>, <c>createdAt</c>.
     ///

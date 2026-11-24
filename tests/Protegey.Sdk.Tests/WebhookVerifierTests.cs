@@ -16,7 +16,7 @@ public class WebhookVerifierTests
     [Fact]
     public void Verify_AcceptsACorrectlySignedPayload()
     {
-        const string secret = "whsec_test123";
+        const string secret = "test_webhook_secret_not_real";
         const string timestamp = "1700000000";
         const string payload = "{\"type\":\"kyc.status_changed\",\"eventId\":\"e1\",\"status\":\"APPROVED\"}";
         var signature = Sign(timestamp, payload, secret);
@@ -27,7 +27,7 @@ public class WebhookVerifierTests
     [Fact]
     public void Verify_RejectsATamperedPayload()
     {
-        const string secret = "whsec_test123";
+        const string secret = "test_webhook_secret_not_real";
         const string timestamp = "1700000000";
         var signature = Sign(timestamp, "{\"event\":\"original\"}", secret);
 
