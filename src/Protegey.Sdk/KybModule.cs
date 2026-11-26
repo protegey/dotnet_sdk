@@ -9,6 +9,10 @@ namespace Protegey.Sdk;
 /// <c>PENDING</c>, <c>SUBMITTED</c>, <c>MORE_INFO_REQUIRED</c>, <c>APPROVED</c>,
 /// <c>REJECTED</c>.</para>
 ///
+/// <para>Applicant objects also carry <c>source</c> (<c>"invitation"</c>|<c>"import"</c>),
+/// <c>externalReference</c> (your id, or null) and <c>importBatchId</c> (the import that created
+/// it, or null).</para>
+///
 /// <para>The API currently also returns two internal submission fields, <c>tokenHash</c> and
 /// <c>documentFilePath</c>. They are not part of the contract, so the SDK strips them from every
 /// response — don't rely on them.</para>
@@ -27,7 +31,8 @@ public sealed class KybModule
     /// <summary>
     /// <c>GET /partner-api/kyb/applicants</c> — paginated. Optional query keys: <c>page</c>,
     /// <c>limit</c>, <c>search</c>, <c>status</c> (any case), <c>stage</c>
-    /// (<c>"invited"</c>|<c>"responded"</c>). Each row carries its <c>submission</c> (or null).
+    /// (<c>"invited"</c>|<c>"responded"</c>), <c>importId</c> (only the applicants created by that
+    /// import). Each row carries its <c>submission</c> (or null).
     /// </summary>
     public async Task<Dictionary<string, object?>> ListApplicantsAsync(Dictionary<string, object?>? query = null, CancellationToken cancellationToken = default)
     {
@@ -168,6 +173,48 @@ public sealed class KybModule
     /// </summary>
     public Task<Dictionary<string, object?>> ListKycVerificationsAsync(string clientId, CancellationToken cancellationToken = default)
         => _http.GetAsync("/partner-api/kyb/applicants/" + Client.Segment(clientId) + "/kyc-sessions", null, cancellationToken);
+
+    /// <summary>
+    /// <c>POST /partner-api/kyb/applicants/import</c> — imports your existing business clients, 1 to
+    /// 1000 per call, same columns as the portal CSV template. Each applicant: <c>legalName</c>,
+    /// <c>country</c> (ISO 3166-1 alpha-2), <c>contactName</c> (required); <c>contactEmail</c> or
+    /// <c>contactPhone</c> (at least one); optional <c>registrationNumber</c>,
+    /// <c>tradingName</c>, <c>legalStatus</c>, <c>incorporationDate</c> (YYYY-MM-DD),
+    /// <c>address</c>, <c>website</c>, <c>owners</c> (<c>[{name, ownershipPercent?}]</c>),
+    /// <c>directors</c> (<c>[{name, role?}]</c>), <c>status</c> (<c>"APPROVED"</c> — default — or
+    /// <c>"PENDING_REVIEW"</c>), <c>externalReference</c> (your id, unique).
+    ///
+    /// <para>Valid applicants are created already submitted and are never emailed. Invalid or
+    /// duplicate ones are reported and skipped — they never fail the call (200). With
+    /// <paramref name="dryRun"/> nothing is created, the applicants are only validated.</para>
+    ///
+    /// <para>Returns <c>{totalRows, importedCount, rejectedCount, errors, importId}</c>; each error
+    /// is <c>{row (0-based index), field (or null), code, error}</c> with <c>code</c> one of
+    /// <c>required</c>, <c>invalid</c>, <c>contact_required</c>, <c>unknown_field</c>,
+    /// <c>column_count</c>, <c>duplicate_in_file</c>, <c>duplicate_existing</c>.
+    /// <c>importId</c> is null on a dry run or when nothing was created; the sanctions/PEP
+    /// screening then runs in the background — follow it with <see cref="GetImportAsync"/>.</para>
+    /// </summary>
+    public Task<Dictionary<string, object?>> ImportApplicantsAsync(IEnumerable<Dictionary<string, object?>> applicants, bool dryRun = false, CancellationToken cancellationToken = default)
+    {
+        var body = new Dictionary<string, object?> { ["applicants"] = applicants.ToList() };
+        if (dryRun)
+        {
+            body["dryRun"] = true;
+        }
+        return _http.PostAsync("/partner-api/kyb/applicants/import", body, cancellationToken);
+    }
+
+    /// <summary>
+    /// <c>GET /partner-api/kyb/imports/{importId}</c> — progress of an import's background
+    /// screening: <c>{importId, status, source, totalRows, importedCount, rejectedCount,
+    /// screenedCount, flaggedCount, flaggedClientIds, createdAt, completedAt}</c>. <c>status</c>:
+    /// <c>SCREENING</c>|<c>COMPLETED</c>; <c>source</c>: <c>api</c>|<c>portal</c>;
+    /// <c>completedAt</c> is null until done. <c>flaggedClientIds</c> (up to 500) are applicants
+    /// with a sanctions/PEP match to review — Protegey never rejects them for you.
+    /// </summary>
+    public Task<Dictionary<string, object?>> GetImportAsync(string importId, CancellationToken cancellationToken = default)
+        => _http.GetAsync("/partner-api/kyb/imports/" + Client.Segment(importId), null, cancellationToken);
 
     private static Dictionary<string, object?> StripInternal(Dictionary<string, object?> obj)
     {

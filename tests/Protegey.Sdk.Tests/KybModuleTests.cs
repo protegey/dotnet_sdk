@@ -136,4 +136,54 @@ public class KybModuleTests
         var row = (Dictionary<string, object?>)((List<object?>)result["data"]!)[0]!;
         Assert.Equal("MATCH", row["nameMatch"]);
     }
+
+    [Fact]
+    public async Task ImportApplicantsAsync_PostsTheApplicantsAndReturnsTheReport()
+    {
+        using var server = new FakeServer(200,
+            "{\"totalRows\":2,\"importedCount\":1,\"rejectedCount\":1,\"errors\":[{\"row\":1,\"field\":null,\"code\":\"contact_required\",\"error\":\"contactEmail or contactPhone is required\"}],\"importId\":\"i1\"}");
+        var protegey = new ProtegeyClient("key", server.BaseUrl);
+
+        var result = await protegey.Kyb.ImportApplicantsAsync(new[]
+        {
+            new Dictionary<string, object?> { ["legalName"] = "Sample SARL", ["country"] = "CI", ["contactName"] = "Awa", ["contactEmail"] = "awa@sample.ci" },
+            new Dictionary<string, object?> { ["legalName"] = "Other SA", ["country"] = "SN", ["contactName"] = "Moussa" },
+        });
+
+        Assert.Equal("POST", server.LastMethod);
+        Assert.Equal("/partner-api/kyb/applicants/import", server.LastPathAndQuery);
+        using var sent = System.Text.Json.JsonDocument.Parse(server.LastRequestBody!);
+        Assert.Equal(new[] { "applicants" }, sent.RootElement.EnumerateObject().Select(p => p.Name).ToArray());
+        Assert.Equal(2, sent.RootElement.GetProperty("applicants").GetArrayLength());
+        Assert.Equal("i1", result["importId"]);
+        var error = (Dictionary<string, object?>)((List<object?>)result["errors"]!)[0]!;
+        Assert.Equal("contact_required", error["code"]);
+        Assert.Null(error["field"]);
+    }
+
+    [Fact]
+    public async Task ImportApplicantsAsync_SendsDryRunWhenAsked()
+    {
+        using var server = new FakeServer(200, "{\"totalRows\":1,\"importedCount\":1,\"rejectedCount\":0,\"errors\":[],\"importId\":null}");
+        var protegey = new ProtegeyClient("key", server.BaseUrl);
+
+        var result = await protegey.Kyb.ImportApplicantsAsync(new[] { new Dictionary<string, object?> { ["legalName"] = "Sample SARL" } }, dryRun: true);
+
+        Assert.Equal("{\"applicants\":[{\"legalName\":\"Sample SARL\"}],\"dryRun\":true}", server.LastRequestBody);
+        Assert.Null(result["importId"]);
+    }
+
+    [Fact]
+    public async Task GetImportAsync_IsAGet()
+    {
+        using var server = new FakeServer(200, "{\"importId\":\"i1\",\"status\":\"SCREENING\",\"flaggedClientIds\":[\"c1\"],\"completedAt\":null}");
+        var protegey = new ProtegeyClient("key", server.BaseUrl);
+
+        var result = await protegey.Kyb.GetImportAsync("i1");
+
+        Assert.Equal("GET", server.LastMethod);
+        Assert.Equal("/partner-api/kyb/imports/i1", server.LastPathAndQuery);
+        Assert.Equal("SCREENING", result["status"]);
+        Assert.Equal("c1", ((List<object?>)result["flaggedClientIds"]!)[0]);
+    }
 }

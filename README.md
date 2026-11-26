@@ -149,6 +149,30 @@ var checks = await protegey.Kyb.ListKycVerificationsAsync(clientId);
 (`Kyc.GetSessionAsync`, list, `kyc.status_changed`) carries `kybClientId` and `kybNameMatch`. A
 400 means the applicant has not submitted its application yet.
 
+### KYB import
+
+Bring your existing business clients in, 1 to 1000 per call — same columns as the portal CSV
+template (`legalName`, `country`, `contactName`, `contactEmail` or `contactPhone`, optional
+`registrationNumber`, `owners`, `directors`, `status`, `externalReference`, …):
+
+```csharp
+var report = await protegey.Kyb.ImportApplicantsAsync(new[]
+{
+    new Dictionary<string, object?> { ["legalName"] = "Sample Trading SARL", ["country"] = "CI", ["contactName"] = "Awa Diallo",
+        ["contactEmail"] = "awa.diallo@sample.ci", ["externalReference"] = "CLI-000123" },
+}); // dryRun: true only validates
+// report: {totalRows, importedCount, rejectedCount, errors[{row, field, code, error}], importId}
+var progress = await protegey.Kyb.GetImportAsync((string)report["importId"]!); // importId is null on a dry run
+// progress: {status (SCREENING | COMPLETED), screenedCount, flaggedCount, flaggedClientIds[], ...}
+var imported = await protegey.Kyb.ListApplicantsAsync(new() { ["importId"] = report["importId"] });
+```
+
+Imported clients are created already submitted (`APPROVED` by default, or `PENDING_REVIEW`) and are
+never emailed. Invalid or duplicate rows are reported in `errors` and skipped, never failing the
+call. Sanctions/PEP screening runs in the background, and Protegey never auto-rejects a match —
+review `flaggedClientIds` yourself. Applicants carry `source` (`invitation` | `import`),
+`externalReference` and `importBatchId`.
+
 Wire-format quirks the SDK handles for you: the KYC list `status` filter is sent in Title Case
 (`"In Review"`), which every API version accepts, the alert list `status`/`disposition` filters and the sanctions `type` only
 accept lowercase. KYB responses currently also include two internal fields (`tokenHash`,

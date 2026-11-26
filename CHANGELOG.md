@@ -15,6 +15,12 @@
   (`{latitude, longitude, accuracyMeters?, capturedAt?, isMocked?}`). Transaction responses
   (`ReportAsync`, `GetAsync`) return `location` (rounded to ~100 m, with `gpsIpDistanceKm`,
   `impliedTravelSpeedKmh`, `isNewGpsArea`) or null.
+- `Kyb`: new `ImportApplicantsAsync` (`POST /partner-api/kyb/applicants/import`, 1–1000 existing
+  clients, optional `dryRun`; returns `{totalRows, importedCount, rejectedCount, errors, importId}`,
+  invalid or duplicate rows are skipped, never failing the call) and `GetImportAsync`
+  (`GET /partner-api/kyb/imports/{importId}` — background screening progress, `flaggedClientIds`).
+  `ListApplicantsAsync` accepts an `importId` filter; applicants carry `source`,
+  `externalReference` and `importBatchId`.
 
 ## 0.5.0
 
