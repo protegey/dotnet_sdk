@@ -42,7 +42,11 @@ public sealed class KybModule
         return result;
     }
 
-    /// <summary><c>GET /partner-api/kyb/applicants/{clientId}</c> — the applicant with its <c>submission</c>.</summary>
+    /// <summary>
+    /// <c>GET /partner-api/kyb/applicants/{clientId}</c> — the applicant with its <c>submission</c>
+    /// and <c>kycVerifications</c> (the identity checks requested for it, newest first — same items
+    /// as <see cref="ListKycVerificationsAsync"/>).
+    /// </summary>
     public async Task<Dictionary<string, object?>> GetApplicantAsync(string clientId, CancellationToken cancellationToken = default)
         => StripInternal(await _http.GetAsync("/partner-api/kyb/applicants/" + Client.Segment(clientId), null, cancellationToken).ConfigureAwait(false));
 
@@ -113,6 +117,57 @@ public sealed class KybModule
         }
         return _http.PatchAsync("/partner-api/kyb/applicants/" + Client.Segment(clientId) + "/decide", body, cancellationToken);
     }
+
+    /// <summary>
+    /// <c>POST /partner-api/kyb/applicants/{clientId}/kyc-sessions</c> — asks the person behind an
+    /// applicant to verify their identity (a standard KYC session linked to the KYB, billed as one).
+    /// Callable any number of times; each call is a new session. Only once the applicant has
+    /// submitted its application (400 otherwise; 404 for an unknown applicant).
+    ///
+    /// <para>All optional: <paramref name="fullName"/> (defaults to the applicant contact name) is
+    /// compared with the name on the ID document — the result is the session's
+    /// <c>kybNameMatch</c>; <paramref name="email"/> — Protegey emails the link only when it is
+    /// given, otherwise relay <c>url</c> yourself; <paramref name="phone"/> (defaults to the
+    /// contact phone); <paramref name="externalUserId"/>, echoed on the session and its
+    /// webhooks.</para>
+    ///
+    /// <para>Returns <c>{sessionId, kybClientId, url, expiresAt, emailedTo}</c> — <c>url</c> is
+    /// single-use and valid until <c>expiresAt</c> (your capture-link lifetime setting, never less
+    /// than 7 days here); <c>emailedTo</c> is null when no email was given. Results arrive on
+    /// <c>kyc.status_changed</c> (with <c>kybClientId</c>).</para>
+    /// </summary>
+    public Task<Dictionary<string, object?>> RequestKycVerificationAsync(string clientId, string? fullName = null, string? email = null, string? phone = null, string? externalUserId = null, CancellationToken cancellationToken = default)
+    {
+        var body = new Dictionary<string, object?>();
+        if (fullName is not null)
+        {
+            body["fullName"] = fullName;
+        }
+        if (email is not null)
+        {
+            body["email"] = email;
+        }
+        if (phone is not null)
+        {
+            body["phone"] = phone;
+        }
+        if (externalUserId is not null)
+        {
+            body["externalUserId"] = externalUserId;
+        }
+        return _http.PostAsync("/partner-api/kyb/applicants/" + Client.Segment(clientId) + "/kyc-sessions", body, cancellationToken);
+    }
+
+    /// <summary>
+    /// <c>GET /partner-api/kyb/applicants/{clientId}/kyc-sessions</c> — <c>{data}</c>, the identity
+    /// checks requested for the applicant, newest first. Each item: <c>sessionId</c>,
+    /// <c>status</c>, <c>outcome</c>, <c>recommendation</c>, <c>expectedName</c>,
+    /// <c>documentFullName</c>, <c>nameMatch</c> (<c>MATCH</c>|<c>MISMATCH</c>|null),
+    /// <c>livenessScore</c>, <c>faceMatchScore</c>, <c>livemode</c>, <c>createdAt</c>,
+    /// <c>updatedAt</c>. Use <see cref="KycModule.GetSessionAsync"/> for images and full detail.
+    /// </summary>
+    public Task<Dictionary<string, object?>> ListKycVerificationsAsync(string clientId, CancellationToken cancellationToken = default)
+        => _http.GetAsync("/partner-api/kyb/applicants/" + Client.Segment(clientId) + "/kyc-sessions", null, cancellationToken);
 
     private static Dictionary<string, object?> StripInternal(Dictionary<string, object?> obj)
     {

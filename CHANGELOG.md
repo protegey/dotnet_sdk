@@ -1,3 +1,21 @@
+## 0.6.0
+
+- `Kyb`: new `RequestKycVerificationAsync` (`POST /partner-api/kyb/applicants/{clientId}/kyc-sessions`
+  — optional `fullName`, `email`, `phone`, `externalUserId`; returns
+  `{sessionId, kybClientId, url, expiresAt, emailedTo}`, the link is emailed only when `email` is
+  given) and `ListKycVerificationsAsync` (`GET …/kyc-sessions`, `{data}` with `nameMatch`
+  `MATCH`|`MISMATCH`|null). `GetApplicantAsync` now documents `kycVerifications`. 400 until the
+  applicant has submitted its application.
+- `Kyc`: capture links are no longer fixed at 30 minutes — `StartSessionAsync` and
+  `ResendSessionAsync` return `expiresAt`; the lifetime is a per-account KYC setting (30 min, 1 h,
+  24 h, 3 days or 7 days, 24 h by default), at least 7 days for a KYB-linked check. Sessions carry
+  `kybClientId` (list, detail, PATCH response); the detail adds `kybNameMatch` and
+  `decision.documentFullName`. `kyc.status_changed` carries `kybClientId` and `kybNameMatch`.
+- `Transactions` / `DeviceEvents`: optional GPS `location`
+  (`{latitude, longitude, accuracyMeters?, capturedAt?, isMocked?}`). Transaction responses
+  (`ReportAsync`, `GetAsync`) return `location` (rounded to ~100 m, with `gpsIpDistanceKm`,
+  `impliedTravelSpeedKmh`, `isNewGpsArea`) or null.
+
 ## 0.5.0
 
 - New `Liveness` module — 3D liveness, a separate paid product (KYC is unaffected):

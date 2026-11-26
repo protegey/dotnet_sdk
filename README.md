@@ -64,6 +64,7 @@ var result = await protegey.Transactions.ReportAsync(new Dictionary<string, obje
     ["transactionType"] = "cashout",
     ["channel"] = "mobile_app",
     ["isCash"] = true,
+    ["location"] = new Dictionary<string, object?> { ["latitude"] = 14.6928, ["longitude"] = -17.4467, ["accuracyMeters"] = 25 }, // optional GPS fix
     // occurredAt defaults to now when omitted
 });
 var page = await protegey.Transactions.ListAsync(new() { ["decision"] = "BLOCKED", ["limit"] = 50 });
@@ -93,7 +94,7 @@ await protegey.Alerts.FlagTransactionAsync((string)result["transactionId"]!); //
 
 // Identity verification (KYC)
 var session = await protegey.Kyc.StartSessionAsync("cust-9981", email: "awa@example.com");
-// Send session["url"] (single-use, valid 30 minutes) to your user however you like
+// Send session["url"] (single-use, valid until session["expiresAt"] — 24 h by default) to your user however you like
 var current = await protegey.Kyc.GetSessionAsync((string)session["sessionId"]!);
 // current["status"] is the final decision; current["recommendation"] (APPROVE | REVIEW | REJECT | null)
 // is Protegey's own verdict and never changes after a manual override.
@@ -111,6 +112,7 @@ var applicants = await protegey.Kyb.ListApplicantsAsync(new() { ["stage"] = "res
 var screening = await protegey.Kyb.ScreenApplicantAsync((string)invite["id"]!);
 await protegey.Kyb.DecideAsync((string)invite["id"]!, "REQUEST_MORE_INFO", note: "Please upload your licence");
 await protegey.Kyb.ResendInvitationAsync((string)invite["id"]!); // returns the submission + new applicationUrl
+var check = await protegey.Kyb.RequestKycVerificationAsync((string)invite["id"]!, email: "john@example.com"); // see below
 
 // Sanctions / PEP screening — {decision, score, pepMatch, matches[], provider, providers, degraded}
 var hit = await protegey.Sanctions.ScreenAsync("John Doe", "person");
@@ -122,6 +124,30 @@ var signal = await protegey.SharedSignal.CheckAsync(new() { ["phoneNumber"] = "+
 await protegey.DeviceEvents.RecordAsync(new() { ["eventId"] = "evt-1", ["visitorId"] = "visitor-from-client-sdk", ["externalCustomerId"] = "cust-9981" });
 await protegey.BehavioralEvents.RecordAsync(new() { ["externalCustomerId"] = "cust-9981", ["sessionId"] = "app-session-1" });
 ```
+
+KYC capture links are single-use and valid until the returned `expiresAt` (`StartSessionAsync`,
+`ResendSessionAsync`). The lifetime is set per account in the portal's KYC settings — 30 min, 1 h,
+24 h, 3 days or 7 days, **24 h by default**.
+
+### KYB identity check
+
+Once a KYB applicant has submitted its application, ask the person behind it (the contact, or
+e.g. a director) to verify their identity — a standard KYC session linked to the applicant:
+
+```csharp
+var kyc = await protegey.Kyb.RequestKycVerificationAsync(clientId,
+    fullName: "Jane Sample",       // compared with the name on the ID document; defaults to the contact name
+    email: "jane@example.com");    // Protegey emails the link ONLY when email is given
+// kyc: {sessionId, kybClientId, url, expiresAt, emailedTo} — emailedTo is null without email: relay url yourself.
+// The link is valid at least 7 days.
+var checks = await protegey.Kyb.ListKycVerificationsAsync(clientId);
+// checks["data"][]: {sessionId, status, outcome, recommendation, expectedName, documentFullName,
+//                    nameMatch (MATCH | MISMATCH | null), livenessScore, faceMatchScore, livemode, createdAt, updatedAt}
+```
+
+`GetApplicantAsync` returns the same items as `kycVerifications`. The KYC session itself
+(`Kyc.GetSessionAsync`, list, `kyc.status_changed`) carries `kybClientId` and `kybNameMatch`. A
+400 means the applicant has not submitted its application yet.
 
 Wire-format quirks the SDK handles for you: the KYC list `status` filter is sent in Title Case
 (`"In Review"`), which every API version accepts, the alert list `status`/`disposition` filters and the sanctions `type` only
@@ -182,7 +208,8 @@ if (!WebhookVerifier.Verify(payload, timestamp, signature, yourWebhookSecret))
 `kyc.status_changed` fires on an automated verification result and on every manual status change (portal or
 `UpdateSessionAsync`). Its `sessionId` is the same id `StartSessionAsync` returns, and it carries
 `externalUserId`, `status`, `recommendation` and `decision` (with `decision.manualReview` after a
-manual change, `previousStatus` / `newStatus` in UPPER_SNAKE_CASE). `kyb.status_changed` carries
+manual change, `previousStatus` / `newStatus` in UPPER_SNAKE_CASE), plus `kybClientId` and
+`kybNameMatch` for a KYB-linked check. `kyb.status_changed` carries
 `submissionStatus` in UPPER_SNAKE_CASE. `Kyc.GetSessionAsync` stays the polling fallback.
 
 ## `baseUrl` — no default, on purpose

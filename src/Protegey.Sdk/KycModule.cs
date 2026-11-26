@@ -14,6 +14,11 @@ namespace Protegey.Sdk;
 /// <para><c>images</c> (list and detail): <c>{documentFront, documentBack, selfie,
 /// documentFaceCrop}</c>, each <c>{url, expiresAt}</c> or null — pre-signed links valid 1 hour and
 /// re-issued on every GET, so fetch again rather than storing them.</para>
+///
+/// <para>Capture links are single-use and valid until the returned <c>expiresAt</c> — your
+/// capture-link lifetime from the portal's KYC settings (30 min, 1 h, 24 h, 3 days or 7 days;
+/// 24 h by default). A session requested through <see cref="KybModule.RequestKycVerificationAsync"/>
+/// carries <c>kybClientId</c> (null otherwise) and its link is valid at least 7 days.</para>
 /// </summary>
 public sealed class KycModule
 {
@@ -32,7 +37,8 @@ public sealed class KycModule
     ///
     /// <para>Each row: <c>sessionId</c>, <c>externalUserId</c>, <c>status</c>, <c>outcome</c>,
     /// <c>recommendation</c>, <c>fullName</c>, <c>documentType</c>, <c>country</c>,
-    /// <c>createdAt</c>, <c>images</c> (no base64 photos, no scores).</para>
+    /// <c>kybClientId</c> (or null), <c>createdAt</c>, <c>images</c> (no base64 photos, no
+    /// scores).</para>
     ///
     /// <para>The SDK sends <c>status</c> in Title Case (<c>"IN_REVIEW"</c> → <c>"In Review"</c>),
     /// which every API version accepts; current versions accept the UPPER_SNAKE_CASE form too.</para>
@@ -49,8 +55,8 @@ public sealed class KycModule
 
     /// <summary>
     /// Starts an identity verification session for one of your end users. Returns
-    /// <c>{sessionId, url}</c> — <c>url</c> is the hosted capture page, single-use and valid for
-    /// 30 minutes.
+    /// <c>{sessionId, url, expiresAt}</c> — <c>url</c> is the hosted capture page, single-use and
+    /// valid until <c>expiresAt</c> (24 h by default, see above).
     ///
     /// <para><paramref name="email"/> and <paramref name="phone"/> are optional, never
     /// Protegey-verified — trusted as given — and feed identity-resolution's cross-partner
@@ -75,7 +81,9 @@ public sealed class KycModule
     /// <c>outcome</c>, <c>recommendation</c>, <c>decision</c> (null until a result exists),
     /// extracted identity fields, scores, <c>images</c> (pre-signed links, see above) and the older
     /// base64 photos (<c>documentPhoto</c>, <c>documentBackPhoto</c>, <c>selfiePhoto</c>,
-    /// <c>documentFaceCrop</c>), kept for backward compatibility.
+    /// <c>documentFaceCrop</c>), kept for backward compatibility. Also <c>kybClientId</c> (or null),
+    /// <c>kybNameMatch</c> (<c>MATCH</c>|<c>MISMATCH</c>|null — the name on the document compared
+    /// with the KYB-expected name) and <c>decision.documentFullName</c> (may be absent or null).
     ///
     /// <para>Polling fallback for the <c>kyc.status_changed</c> webhook, whose <c>sessionId</c> is
     /// this same id.</para>
@@ -89,7 +97,8 @@ public sealed class KycModule
     /// <c>documentType</c>, <c>idDocumentNumber</c>, <c>sex</c>, <c>dateOfBirth</c>,
     /// <c>placeOfBirth</c>, <c>profession</c>, <c>dateOfIssue</c>, <c>dateOfExpiration</c>,
     /// <c>status</c> (<c>"APPROVED"</c>|<c>"DECLINED"</c>|<c>"IN_REVIEW"</c>), <c>reviewNote</c>.
-    /// Returns <c>{sessionId, externalUserId, status, outcome, recommendation, decision}</c>. A
+    /// Returns <c>{sessionId, externalUserId, kybClientId, status, outcome, recommendation,
+    /// decision}</c>. A
     /// status change is recorded as <c>decision.manualReview</c> (<c>reviewedBy</c> =
     /// <c>"Partner API"</c>, <c>reviewedAt</c>, <c>previousStatus</c> / <c>newStatus</c> in
     /// UPPER_SNAKE_CASE, <c>note</c>) and sends a <c>kyc.status_changed</c> webhook.
@@ -98,8 +107,8 @@ public sealed class KycModule
         => _http.PatchAsync("/partner-api/kyc/sessions/" + Client.Segment(sessionId), fields, cancellationToken);
 
     /// <summary>
-    /// <c>POST /partner-api/kyc/sessions/{sessionId}/resend</c> — issues a fresh 30-minute capture
-    /// link and sets the status to <c>RESUBMITTED</c>. Returns <c>{sessionId, url}</c>.
+    /// <c>POST /partner-api/kyc/sessions/{sessionId}/resend</c> — issues a fresh capture link and
+    /// sets the status to <c>RESUBMITTED</c>. Returns <c>{sessionId, url, expiresAt}</c>.
     /// </summary>
     public Task<Dictionary<string, object?>> ResendSessionAsync(string sessionId, CancellationToken cancellationToken = default)
         => _http.PostAsync("/partner-api/kyc/sessions/" + Client.Segment(sessionId) + "/resend", null, cancellationToken);

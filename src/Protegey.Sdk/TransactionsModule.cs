@@ -38,7 +38,13 @@ public sealed class TransactionsModule
     /// as <see cref="DeviceEventsModule.RecordAsync"/>), <c>devicePhoneNumber</c>,
     /// <c>lastPasswordChangeAt</c> / <c>lastEmailChangeAt</c> / <c>lastPhoneChangeAt</c>
     /// (ISO 8601 — lets a rule flag a large transaction right after a credential change or SIM
-    /// swap), <c>accountBalanceBefore</c>.</para>
+    /// swap), <c>accountBalanceBefore</c>, <c>location</c> — the device's GPS fix:
+    /// <c>{latitude, longitude, accuracyMeters?, capturedAt? (ISO 8601), isMocked?}</c>.</para>
+    ///
+    /// <para>The response (and <see cref="GetAsync"/>) also carries <c>location</c>, null when none
+    /// was sent: <c>{latitude, longitude, accuracyMeters, isMocked, gpsIpDistanceKm,
+    /// impliedTravelSpeedKmh, isNewGpsArea}</c> — coordinates rounded to about 100 m; every field but
+    /// <c>isMocked</c> can be null.</para>
     /// </summary>
     public Task<Dictionary<string, object?>> ReportAsync(Dictionary<string, object?> input, CancellationToken cancellationToken = default)
     {
@@ -62,7 +68,8 @@ public sealed class TransactionsModule
     /// <summary>
     /// <c>GET /partner-api/transactions/{id}</c> — <paramref name="id"/> is either Protegey's
     /// <c>transactionId</c> or your own <c>externalTransactionId</c>. Returns the decision and up
-    /// to 50 linked alerts (no amount/currency/direction).
+    /// to 50 linked alerts (no amount/currency/direction), and <c>location</c> (see
+    /// <see cref="ReportAsync"/>).
     /// </summary>
     public Task<Dictionary<string, object?>> GetAsync(string id, CancellationToken cancellationToken = default)
         => _http.GetAsync("/partner-api/transactions/" + Client.Segment(id), null, cancellationToken);

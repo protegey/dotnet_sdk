@@ -22,7 +22,8 @@ public sealed class DeviceEventsModule
     /// <c>language</c>, <c>appVersion</c>, <c>isRooted</c>, <c>isEmulator</c>,
     /// <c>connectionType</c>, <c>devicePixelRatio</c>, <c>manufacturer</c>, <c>cpuCores</c>,
     /// <c>totalMemoryMb</c>, <c>totalStorageMb</c>, <c>freeStorageMb</c>, <c>batteryLevel</c>,
-    /// <c>isCharging</c>, <c>isVpnActive</c>.
+    /// <c>isCharging</c>, <c>isVpnActive</c>; <c>location</c> — the device's GPS fix:
+    /// <c>{latitude, longitude, accuracyMeters?, capturedAt? (ISO 8601), isMocked?}</c>.
     ///
     /// <para>Returns <c>{recorded, action, riskScore}</c>; <c>action</c> is <c>ALLOW</c>|
     /// <c>SOFT_CHALLENGE</c>|<c>HARD_CHALLENGE</c>|<c>BLOCK</c>.</para>

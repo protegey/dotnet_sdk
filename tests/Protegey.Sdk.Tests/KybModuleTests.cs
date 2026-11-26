@@ -94,4 +94,46 @@ public class KybModuleTests
         Assert.Equal("{\"decision\":\"REQUEST_MORE_INFO\",\"note\":\"Upload your licence\"}", server.LastRequestBody);
         Assert.Equal("https://portal/y", result["applicationUrl"]);
     }
+
+    [Fact]
+    public async Task RequestKycVerificationAsync_SendsOnlyTheGivenFields()
+    {
+        using var server = new FakeServer(201,
+            "{\"sessionId\":\"k1\",\"kybClientId\":\"c1\",\"url\":\"https://capture/x\",\"expiresAt\":\"2026-12-03T09:00:00.000Z\",\"emailedTo\":null}");
+        var protegey = new ProtegeyClient("key", server.BaseUrl);
+
+        var result = await protegey.Kyb.RequestKycVerificationAsync("c1", fullName: "Jane Sample", externalUserId: "director_17");
+
+        Assert.Equal("POST", server.LastMethod);
+        Assert.Equal("/partner-api/kyb/applicants/c1/kyc-sessions", server.LastPathAndQuery);
+        Assert.Equal("{\"fullName\":\"Jane Sample\",\"externalUserId\":\"director_17\"}", server.LastRequestBody);
+        Assert.Equal("c1", result["kybClientId"]);
+        Assert.Equal("2026-12-03T09:00:00.000Z", result["expiresAt"]);
+        Assert.Null(result["emailedTo"]);
+    }
+
+    [Fact]
+    public async Task RequestKycVerificationAsync_SendsAnEmptyBodyByDefault()
+    {
+        using var server = new FakeServer(201, "{\"sessionId\":\"k1\"}");
+        var protegey = new ProtegeyClient("key", server.BaseUrl);
+
+        await protegey.Kyb.RequestKycVerificationAsync("c1");
+
+        Assert.Equal("{}", server.LastRequestBody);
+    }
+
+    [Fact]
+    public async Task ListKycVerificationsAsync_IsAGet()
+    {
+        using var server = new FakeServer(200, "{\"data\":[{\"sessionId\":\"k1\",\"status\":\"APPROVED\",\"nameMatch\":\"MATCH\"}]}");
+        var protegey = new ProtegeyClient("key", server.BaseUrl);
+
+        var result = await protegey.Kyb.ListKycVerificationsAsync("c1");
+
+        Assert.Equal("GET", server.LastMethod);
+        Assert.Equal("/partner-api/kyb/applicants/c1/kyc-sessions", server.LastPathAndQuery);
+        var row = (Dictionary<string, object?>)((List<object?>)result["data"]!)[0]!;
+        Assert.Equal("MATCH", row["nameMatch"]);
+    }
 }

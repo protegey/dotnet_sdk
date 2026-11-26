@@ -45,7 +45,8 @@ public static class WebhookEventTypes
     /// <c>PATCH /partner-api/kyc/sessions/{id}</c>). Payload: <c>sessionId</c> (the same id the API
     /// returns), <c>externalUserId</c>, <c>status</c> (<c>APPROVED</c>|<c>IN_REVIEW</c>|<c>DECLINED</c>),
     /// <c>recommendation</c> (<c>APPROVE</c>|<c>REVIEW</c>|<c>REJECT</c>|null), <c>decision</c>
-    /// (with <c>manualReview</c> after a manual change).</summary>
+    /// (with <c>manualReview</c> after a manual change), <c>kybClientId</c> and <c>kybNameMatch</c>
+    /// (<c>MATCH</c>|<c>MISMATCH</c>|null; both null unless the session is KYB-linked).</summary>
     public const string KycStatusChanged = "kyc.status_changed";
 
     /// <summary>A KYB application was decided. Payload: <c>clientId</c>, <c>status</c>

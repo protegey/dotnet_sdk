@@ -50,6 +50,31 @@ public class TransactionsModuleTests
     }
 
     [Fact]
+    public async Task ReportAsync_ForwardsLocationAndReturnsTheGpsSignals()
+    {
+        using var server = new FakeServer(201,
+            "{\"transactionId\":\"tx-1\",\"decision\":\"REVIEW\",\"riskScore\":40,\"alerts\":[],\"deviceAction\":null," +
+            "\"location\":{\"latitude\":14.693,\"longitude\":-17.447,\"accuracyMeters\":25,\"isMocked\":false,\"gpsIpDistanceKm\":1200,\"impliedTravelSpeedKmh\":null,\"isNewGpsArea\":true}}");
+        var protegey = new ProtegeyClient("key", server.BaseUrl);
+
+        var result = await protegey.Transactions.ReportAsync(new Dictionary<string, object?>
+        {
+            ["externalTransactionId"] = "tx-1",
+            ["externalCustomerId"] = "cust-1",
+            ["direction"] = "DEBIT",
+            ["amount"] = 5000,
+            ["transactionType"] = "cashout",
+            ["location"] = new Dictionary<string, object?> { ["latitude"] = 14.6928, ["longitude"] = -17.4467, ["accuracyMeters"] = 25 },
+        });
+
+        Assert.Contains("\"location\":{\"latitude\":14.6928,\"longitude\":-17.4467,\"accuracyMeters\":25}", server.LastRequestBody);
+        var location = (Dictionary<string, object?>)result["location"]!;
+        Assert.Equal(false, location["isMocked"]);
+        Assert.Equal(true, location["isNewGpsArea"]);
+        Assert.Null(location["impliedTravelSpeedKmh"]);
+    }
+
+    [Fact]
     public async Task ReportAsync_ThrowsOnANonSuccessResponse()
     {
         using var server = new FakeServer(422, "{\"message\":\"amount must be positive\"}");
