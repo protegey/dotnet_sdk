@@ -135,6 +135,39 @@ public class KycModuleTests
     }
 
     [Fact]
+    public async Task GetSessionAsync_ExposesGroupPresenceAndNetworkFlagGroupEntities()
+    {
+        using var server = new FakeServer(200,
+            "{\"sessionId\":\"s1\",\"status\":\"APPROVED\",\"groupPresence\":[{\"entity\":\"Sample Pay Senegal\",\"status\":\"APPROVED\"," +
+            "\"createdAt\":\"2026-03-02T10:00:00.000Z\",\"matchedOn\":[\"FACE\",\"GOVERNMENT_ID\"]}]," +
+            "\"decision\":{\"identityResolution\":{\"networkFlag\":{\"flagged\":true,\"matchCount\":1,\"groupEntities\":[\"Sample Pay Senegal\"]}}}}");
+        var protegey = new ProtegeyClient("key", server.BaseUrl);
+
+        var result = await protegey.Kyc.GetSessionAsync("s1");
+
+        var presence = Assert.IsType<Dictionary<string, object?>>(Assert.Single(Assert.IsType<List<object?>>(result["groupPresence"])));
+        Assert.Equal("Sample Pay Senegal", presence["entity"]);
+        Assert.Equal("APPROVED", presence["status"]);
+        Assert.Equal(new object?[] { "FACE", "GOVERNMENT_ID" }, Assert.IsType<List<object?>>(presence["matchedOn"]));
+        var decision = Assert.IsType<Dictionary<string, object?>>(result["decision"]);
+        var identityResolution = Assert.IsType<Dictionary<string, object?>>(decision["identityResolution"]);
+        var networkFlag = Assert.IsType<Dictionary<string, object?>>(identityResolution["networkFlag"]);
+        Assert.Equal(new object?[] { "Sample Pay Senegal" }, Assert.IsType<List<object?>>(networkFlag["groupEntities"]));
+    }
+
+    [Fact]
+    public async Task GetSessionAsync_GroupPresenceIsNullOutsideAGroup()
+    {
+        using var server = new FakeServer(200, "{\"sessionId\":\"s1\",\"status\":\"APPROVED\",\"groupPresence\":null}");
+        var protegey = new ProtegeyClient("key", server.BaseUrl);
+
+        var result = await protegey.Kyc.GetSessionAsync("s1");
+
+        Assert.True(result.ContainsKey("groupPresence"));
+        Assert.Null(result["groupPresence"]);
+    }
+
+    [Fact]
     public async Task UpdateSessionAsync_SendsStatusAndReviewNoteAndReturnsTheManualReview()
     {
         using var server = new FakeServer(200,

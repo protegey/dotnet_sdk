@@ -100,6 +100,9 @@ var current = await protegey.Kyc.GetSessionAsync((string)session["sessionId"]!);
 // is Protegey's own verdict and never changes after a manual override.
 // current["images"]: {documentFront, documentBack, selfie, documentFaceCrop}, each {url, expiresAt} or null —
 // pre-signed links valid 1 hour, re-issued on every GET (don't store them).
+// current["groupPresence"] (partner groups only): the same person's KYC at sister entities of your group —
+// [{entity, status, createdAt, matchedOn: [FACE, GOVERNMENT_ID, PHONE, EMAIL]}] — or null; information for
+// your reviewer, being a client of two sister entities is normal.
 var inReview = await protegey.Kyc.ListSessionsAsync(new() { ["status"] = "IN_REVIEW" });
 var forCustomer = await protegey.Kyc.ListSessionsAsync(new() { ["externalUserId"] = "cust-9981" }); // exact match
 await protegey.Kyc.UpdateSessionAsync((string)session["sessionId"]!, new() { ["status"] = "APPROVED", ["reviewNote"] = "Checked manually" });
@@ -117,7 +120,9 @@ var check = await protegey.Kyb.RequestKycVerificationAsync((string)invite["id"]!
 // Sanctions / PEP screening — {decision, score, pepMatch, matches[], provider, providers, degraded}
 var hit = await protegey.Sanctions.ScreenAsync("John Doe", "person");
 
-// Shared fraud signal network — matches[] only carry {category, reportedDaysAgo}
+// Shared fraud signal network — matches[] carry {category, reportedDaysAgo, groupEntity}; groupEntity
+// names a sister entity of your own partner group (null for the public network, which stays
+// anonymous) and groupMatchCount counts those reports
 var signal = await protegey.SharedSignal.CheckAsync(new() { ["phoneNumber"] = "+237690000000", ["externalCustomerId"] = "cust-9981" });
 
 // Forward client-collected device / behavioral signals

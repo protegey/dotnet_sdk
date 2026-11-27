@@ -21,10 +21,14 @@ public sealed class SharedSignalModule
     /// raised.
     ///
     /// <para>Returns <c>{flagged, category, reportedDaysAgo, flagConfidence, matchCount,
-    /// matches[]}</c>. Each match carries only <c>category</c> and <c>reportedDaysAgo</c>
-    /// (newest first) — the reporter and the reported person's details are never returned.
-    /// <c>category</c>: <c>CONFIRMED_FRAUD</c>|<c>IDENTITY_THEFT</c>|<c>MONEY_LAUNDERING</c>|
-    /// <c>OTHER</c> (null when not flagged).</para>
+    /// groupMatchCount, matches[]}</c>. Each match carries <c>category</c>,
+    /// <c>reportedDaysAgo</c> and <c>groupEntity</c> (newest first) — the reporter and the reported
+    /// person's details are never returned, except a sister entity of your own partner group:
+    /// <c>groupEntity</c> is then its name (null for the public network, which stays anonymous)
+    /// and <c>groupMatchCount</c> counts those reports (0 when you are in no group). Both are
+    /// optional (absent on older API versions). <c>category</c>:
+    /// <c>CONFIRMED_FRAUD</c>|<c>IDENTITY_THEFT</c>|<c>MONEY_LAUNDERING</c>|<c>OTHER</c> (null
+    /// when not flagged).</para>
     /// </summary>
     public Task<Dictionary<string, object?>> CheckAsync(Dictionary<string, object?> identifiers, CancellationToken cancellationToken = default)
         => _http.PostAsync("/partner-api/shared-signal/check", identifiers, cancellationToken);

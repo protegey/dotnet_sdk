@@ -94,8 +94,12 @@ public sealed class KybModule
     /// <summary>
     /// <c>GET /partner-api/kyb/applicants/{clientId}/screen</c> — runs sanctions/PEP screening of
     /// the business and each declared owner and stores the result on the submission. Returns
-    /// <c>{business, owners[], screenedAt, provider, providers, defaultListChecked, degraded}</c>;
-    /// each <c>decision</c> is <c>BLOCKED</c>|<c>REVIEW</c>|<c>CLEAR</c>.
+    /// <c>{business, owners[], screenedAt, provider, providers, defaultListChecked, degraded,
+    /// networkFlags?}</c>; each <c>decision</c> is <c>BLOCKED</c>|<c>REVIEW</c>|<c>CLEAR</c>.
+    /// <c>networkFlags</c> (fixed questionnaire only: shared-network check of the business phone /
+    /// owner tax ids) is <c>[{label, flagged, matchCount, flagConfidence, groupEntities?}]</c> —
+    /// <c>groupEntities</c> lists the entities of your own partner group that reported it (the
+    /// public network stays anonymous).
     /// </summary>
     public Task<Dictionary<string, object?>> ScreenApplicantAsync(string clientId, CancellationToken cancellationToken = default)
         => _http.GetAsync("/partner-api/kyb/applicants/" + Client.Segment(clientId) + "/screen", null, cancellationToken);

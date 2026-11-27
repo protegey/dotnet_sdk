@@ -82,6 +82,20 @@ public class KybModuleTests
     }
 
     [Fact]
+    public async Task ScreenApplicantAsync_ExposesNetworkFlagGroupEntities()
+    {
+        using var server = new FakeServer(200,
+            "{\"business\":{\"decision\":\"CLEAR\"},\"owners\":[],\"networkFlags\":[{\"label\":\"Business phone\",\"flagged\":true," +
+            "\"matchCount\":1,\"flagConfidence\":40,\"groupEntities\":[\"Sample Pay Senegal\"]}]}");
+        var protegey = new ProtegeyClient("key", server.BaseUrl);
+
+        var result = await protegey.Kyb.ScreenApplicantAsync("c1");
+
+        var flag = (Dictionary<string, object?>)((List<object?>)result["networkFlags"]!)[0]!;
+        Assert.Equal(new object?[] { "Sample Pay Senegal" }, (List<object?>)flag["groupEntities"]!);
+    }
+
+    [Fact]
     public async Task DecideAsync_PatchesTheDecision()
     {
         using var server = new FakeServer(200, Business.Replace("INVITED", "MORE_INFO_REQUIRED") + ",\"applicationUrl\":\"https://portal/y\"}");

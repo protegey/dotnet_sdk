@@ -84,6 +84,14 @@ public sealed class KycModule
     /// <c>documentFaceCrop</c>), kept for backward compatibility. Also <c>kybClientId</c> (or null),
     /// <c>kybNameMatch</c> (<c>MATCH</c>|<c>MISMATCH</c>|null — the name on the document compared
     /// with the KYB-expected name) and <c>decision.documentFullName</c> (may be absent or null).
+    /// <c>decision.identityResolution.networkFlag</c>, when present, may carry
+    /// <c>groupEntities</c> (the entities of your own partner group that reported this person).
+    ///
+    /// <para>Partner groups only: <c>groupPresence</c> lists the same person's KYC at sister
+    /// entities of your group (<c>[{entity, status, createdAt, matchedOn}]</c>, <c>matchedOn</c>
+    /// among <c>FACE</c>|<c>GOVERNMENT_ID</c>|<c>PHONE</c>|<c>EMAIL</c>), or is null when none or
+    /// when you are in no group — information for your reviewer, being a client of two sister
+    /// entities is normal.</para>
     ///
     /// <para>Polling fallback for the <c>kyc.status_changed</c> webhook, whose <c>sessionId</c> is
     /// this same id.</para>

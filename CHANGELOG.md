@@ -21,6 +21,14 @@
   (`GET /partner-api/kyb/imports/{importId}` — background screening progress, `flaggedClientIds`).
   `ListApplicantsAsync` accepts an `importId` filter; applicants carry `source`,
   `externalReference` and `importBatchId`.
+- Partner groups: `SharedSignal.CheckAsync` returns `groupMatchCount` (reports by an entity of
+  your own partner group, 0 when you are in no group) and each match's `groupEntity` (that sister
+  entity's name; null for the public network, which stays anonymous). `Kyc.GetSessionAsync`
+  returns `groupPresence` (the same person's KYC at sister entities: `entity`, `status`,
+  `createdAt`, `matchedOn` `FACE`|`GOVERNMENT_ID`|`PHONE`|`EMAIL` — or null). The shared-network
+  flags of KYC identity resolution (`decision.identityResolution.networkFlag`) and of KYB
+  screening (`networkFlags[]`) may carry `groupEntities`. All optional and backward compatible; no
+  code change needed.
 
 ## 0.5.0
 

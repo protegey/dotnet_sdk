@@ -78,4 +78,23 @@ public class ScreeningAndEventsTests
         var match = (Dictionary<string, object?>)((List<object?>)result["matches"]!)[1]!;
         Assert.Equal(new[] { "category", "reportedDaysAgo" }, match.Keys.ToArray());
     }
+
+    [Fact]
+    public async Task SharedSignal_CheckAsync_ExposesGroupMatches()
+    {
+        using var server = new FakeServer(201,
+            "{\"flagged\":true,\"category\":\"CONFIRMED_FRAUD\",\"reportedDaysAgo\":12,\"flagConfidence\":86,\"matchCount\":2,\"groupMatchCount\":1," +
+            "\"matches\":[{\"category\":\"CONFIRMED_FRAUD\",\"reportedDaysAgo\":12,\"groupEntity\":\"Sample Pay Senegal\"}," +
+            "{\"category\":\"IDENTITY_THEFT\",\"reportedDaysAgo\":140,\"groupEntity\":null}]}");
+        var protegey = new ProtegeyClient("key", server.BaseUrl);
+
+        var result = await protegey.SharedSignal.CheckAsync(new Dictionary<string, object?> { ["phoneNumber"] = "+237690000000" });
+
+        Assert.Equal(1L, Convert.ToInt64(result["groupMatchCount"]));
+        var matches = (List<object?>)result["matches"]!;
+        Assert.Equal("Sample Pay Senegal", ((Dictionary<string, object?>)matches[0]!)["groupEntity"]);
+        var publicMatch = (Dictionary<string, object?>)matches[1]!;
+        Assert.True(publicMatch.ContainsKey("groupEntity"));
+        Assert.Null(publicMatch["groupEntity"]);
+    }
 }
